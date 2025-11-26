@@ -2,13 +2,14 @@ import google.generativeai as genai
 from dotenv import load_dotenv
 import os
 import json
+import re
 
 load_dotenv()
 API_KEY = os.getenv("GEMINI_API_KEY")
 
 genai.configure(api_key=API_KEY)
 
-MODEL = "gemini-1.5-flash"
+MODEL = "gemini-2.0-flash"
 
 def analyze_article(text: str) -> dict:
     """
@@ -43,8 +44,17 @@ def analyze_article(text: str) -> dict:
 
     response = genai.GenerativeModel(MODEL).generate_content(prompt)
 
+    raw = response.text.strip()
+
+    # Remove ```json ... ``` fences if present
+    raw = re.sub(r"^```json", "", raw)
+    raw = re.sub(r"^```", "", raw)
+    raw = raw.replace("```", "").strip()
+
     try:
-        # extract JSON part
-        return json.loads(response.text.strip())
+        return json.loads(raw)
     except Exception:
-        return {"error": "Malformed JSON", "raw": response.text}
+        return {
+            "error": "Failed to parse JSON",
+            "raw_response": raw
+        }
